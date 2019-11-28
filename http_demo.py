@@ -11,9 +11,11 @@ uart0_at_speed = 115200
 channel0_at = serial.Serial(uart0_at, uart0_at_speed, timeout=0.5, parity=serial.PARITY_NONE, rtscts=True)  # open serial port
 
 topic = "sqn/test"
-clientID = "client-jmftest1"
+clientID = "client-test1"
+
 stream_count = 9
 use_tls = False
+dbg_msgs = False
 r = '\r'
 ssl_ca_pem_certificat = '''
 -----BEGIN CERTIFICATE-----
@@ -47,33 +49,28 @@ KOqkqm57TH2H3eDJAkSnh6/DNFu0Qg==
 
 #====================================================================================================================
 
-parser = argparse.ArgumentParser(description='Script demonstrating HTTP/HTTPS/MQTT')
+parser = argparse.ArgumentParser(
+	description='Script demonstrating HTTP/HTTPS/MQTT usage', 
+	epilog='!! Verify UART (uart0_at) and speed (uart0_at_speed) settings in script !!\n\n'
+	)
+parser.add_argument('-d', '--debug', action='store_true',
+	help='enable output of debug messages',
+	default=False
+        )
 parser.add_argument('-s', '--server',
         help='server ip addr or domain name',
-        default='18.185.242.131'
+        default='broker.hivemq.com'
         )
 parser.add_argument('-p', '--port',
         help='server port',
         default='1883'
         )
-parser.add_argument('-e', '--encrypted',
-        help='Test mode: none, one-way, two-way',
-        default='none',
-        )
-parser.add_argument('-a', '--caCert',
-        help='path to ca certificate',
-        default='',
-        )
-parser.add_argument('-c', '--clientCert',
-        help='path to client certificate',
-        default='',
-        )
-parser.add_argument('-k', '--clientKey',
-        help='path to client private key',
-        default='',
-        )
 
 #====================================================================================================================
+
+def do_debug(doit, msg):
+	if doit:
+		print(msg)
 
 def pause(msg):
 	agn=raw_input(msg) 
@@ -282,25 +279,34 @@ def get_test():
         print('=================================')
         pause("Press <ENTER> to continue. ")
 
-def mqtt_recv(server, port, mode, caCert, clientCert, clientKey):
+def mqtt_recv(debug, server, port, mode, caCert, clientCert, clientKey):
 	try:
                 mqtt_cfg = "AT+SQNSMQTTCLIENTCFG=0,\"" + clientID + "\""+ r
+   		do_debug(debug, "Send Command: " + mqtt_cfg)
                 channel0_at.write(mqtt_cfg)
                 waiting_response('OK')
 
                 mqtt_conn = 'AT+SQNSMQTTCLIENTCONNECT=0,"' + server + '",' + port + r
+   		do_debug(debug,"Send Command: " + mqtt_conn)
                 channel0_at.write(mqtt_conn)
-                get_line_include('+SQNSMQTTCLIENTONCONNECT:')
+                resp=get_line_include('+SQNSMQTTCLIENTONCONNECT:')
+		if resp == '':
+			print('TIME OUT:Unable to connect! ')
+			return
+   		do_debug(debug,"Connect Response: " + resp)
 
                 mqtt_sub = "AT+SQNSMQTTCLIENTSUBSCRIBE=0,\"" + topic + "\",1" + r
+   		do_debug(debug,"Send Command: " + mqtt_sub)
                 channel0_at.write(mqtt_sub)
                 get_line_include('+SQNSMQTTCLIENTONSUBSCRIBE:')
                 print 'Subscription now active...'
           	while True:
 	                resp = get_line_include('+SQNSMQTTCLIENTONMESSAGE:')
+			print('Received a message: ' + resp)
 			if resp != '':
 				val = resp.split(",")
 				cmd = 'AT+SQNSMQTTCLIENTRCVMESSAGE=0,"' + topic + '",' + val[4] + r
+   				do_debug(debug,"Send Command: " + cmd)
 				channel0_at.write(cmd)
 				reading_resp()
         			agn=pause("Press <X> to monitor/receive another. ")
@@ -309,37 +315,42 @@ def mqtt_recv(server, port, mode, caCert, clientCert, clientKey):
    			
 		
 		mqtt_disconn = 'AT+SQNSMQTTCLIENTDISCONNECT=0' + r
+ 		do_debug(debug,"Send Command: " + mqtt_disconn)
 		channel0_at.write(mqtt_disconn)
 		resp = get_line_include('OK')
 	finally:
 		return
 
-def mqtt_post(server, port, mode, caCert, clientCert, clientKey):
+def mqtt_post(debug, server, port, mode, caCert, clientCert, clientKey):
 	try:
                 mqtt_cfg = "AT+SQNSMQTTCLIENTCFG=0,\"" + clientID + "\""+ r
+ 		do_debug(debug,"Send Command: " + mqtt_cfg)
                 channel0_at.write(mqtt_cfg)
                 waiting_response('OK')
 
                 mqtt_conn = 'AT+SQNSMQTTCLIENTCONNECT=0,"' + server + '",' + port + r
+ 		do_debug(debug,"Send Command: " + mqtt_conn)
                 channel0_at.write(mqtt_conn)
                 get_line_include('+SQNSMQTTCLIENTONCONNECT:')
 
                 mqtt_sub = "AT+SQNSMQTTCLIENTSUBSCRIBE=0,\"" + topic + "\",1" + r
+ 		do_debug(debug,"Send Command: " + mqtt_sub)
                 channel0_at.write(mqtt_sub)
-                get_line_include('+SQNSMQTTCLIENTONSUBSCRIBE:')
-                print 'Subscription now active...'
+                resp=get_line_include('+SQNSMQTTCLIENTONSUBSCRIBE:')
+                print 'Subscription now active. ['+resp+']'
           	while True:
 			msg = raw_input("Enter message to post or 'x' to exit: ")
                         if msg == 'x':
  				break
 			cmd = 'AT+SQNSMQTTCLIENTPUBLISH=0,"' + topic + '",1' + r
-			print('Sending CMD: ' + cmd)
+			do_debug(debug,'Sending CMD: ' + cmd)
 			channel0_at.write(cmd)
 	                waiting_response('> ')
 			channel0_at.write(msg + '')
 	                get_line_include('+SQNSMQTTCLIENTPUBLISH:')
 		
 		mqtt_disconn = 'AT+SQNSMQTTCLIENTDISCONNECT=0' + r
+ 		do_debug(debug,"Send Command: " + mqtt_disconn)
 		channel0_at.write(mqtt_disconn)
 		resp = get_line_include('OK')
 	finally:
@@ -396,10 +407,10 @@ if __name__ == '__main__':
           get_test()
         elif ans=="7":
           print("\nSetup for MQTT Subscribe") 
-          mqtt_recv(args.server, args.port, args.encrypted, args.caCert, args.clientCert, args.clientKey)	
+          mqtt_recv(args.debug, args.server, args.port, args.encrypted, args.caCert, args.clientCert, args.clientKey)	
         elif ans=="8":
           print("\nSetup for MQTT Post") 
-          mqtt_post(args.server, args.port, args.encrypted, args.caCert, args.clientCert, args.clientKey)	
+          mqtt_post(args.debug, args.server, args.port, args.encrypted, args.caCert, args.clientCert, args.clientKey)	
         elif ans=="9":
           print("\nToggle TLS setting") 
 	  use_tls = not use_tls
