@@ -279,7 +279,7 @@ def get_test():
         print('=================================')
         pause("Press <ENTER> to continue. ")
 
-def mqtt_recv(debug, server, port, mode, caCert, clientCert, clientKey):
+def mqtt_recv(debug, server, port):
 	try:
                 mqtt_cfg = "AT+SQNSMQTTCLIENTCFG=0,\"" + clientID + "\""+ r
    		do_debug(debug, "Send Command: " + mqtt_cfg)
@@ -321,7 +321,7 @@ def mqtt_recv(debug, server, port, mode, caCert, clientCert, clientKey):
 	finally:
 		return
 
-def mqtt_post(debug, server, port, mode, caCert, clientCert, clientKey):
+def mqtt_post(debug, server, port):
 	try:
                 mqtt_cfg = "AT+SQNSMQTTCLIENTCFG=0,\"" + clientID + "\""+ r
  		do_debug(debug,"Send Command: " + mqtt_cfg)
@@ -407,10 +407,10 @@ if __name__ == '__main__':
           get_test()
         elif ans=="7":
           print("\nSetup for MQTT Subscribe") 
-          mqtt_recv(args.debug, args.server, args.port, args.encrypted, args.caCert, args.clientCert, args.clientKey)	
+          mqtt_recv(args.debug, args.server, args.port)	
         elif ans=="8":
           print("\nSetup for MQTT Post") 
-          mqtt_post(args.debug, args.server, args.port, args.encrypted, args.caCert, args.clientCert, args.clientKey)	
+          mqtt_post(args.debug, args.server, args.port)	
         elif ans=="9":
           print("\nToggle TLS setting") 
 	  use_tls = not use_tls
