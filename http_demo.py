@@ -126,6 +126,7 @@ def waiting_response_noexit(resp):
 				found = 1
 				return True
 		time.sleep(1)
+	return False
 
 def get_line_include(word):
 	maxtimeout = 20
@@ -280,12 +281,11 @@ def get_test():
         pause("Press <ENTER> to continue. ")
 
 def mqtt_recv(debug, server, port):
+        mqtt_cfg = "AT+SQNSMQTTCLIENTCFG=0,\"" + clientID + "\""+ r
+   	do_debug(debug, "Send Command: " + mqtt_cfg)
+        channel0_at.write(mqtt_cfg)
+        waiting_response_noexit('OK')
 	try:
-                mqtt_cfg = "AT+SQNSMQTTCLIENTCFG=0,\"" + clientID + "\""+ r
-   		do_debug(debug, "Send Command: " + mqtt_cfg)
-                channel0_at.write(mqtt_cfg)
-                waiting_response('OK')
-
                 mqtt_conn = 'AT+SQNSMQTTCLIENTCONNECT=0,"' + server + '",' + port + r
    		do_debug(debug,"Send Command: " + mqtt_conn)
                 channel0_at.write(mqtt_conn)
@@ -304,21 +304,18 @@ def mqtt_recv(debug, server, port):
 	                resp = get_line_include('+SQNSMQTTCLIENTONMESSAGE:')
 			print('Received a message: ' + resp)
 			if resp != '':
-				val = resp.split(",")
-				cmd = 'AT+SQNSMQTTCLIENTRCVMESSAGE=0,"' + topic + '",' + val[4] + r
-   				do_debug(debug,"Send Command: " + cmd)
-				channel0_at.write(cmd)
-				reading_resp()
-        			agn=pause("Press <X> to monitor/receive another. ")
-                                if agn:
-					break
-   			
-		
+			    cmd = 'AT+SQNSMQTTCLIENTRCVMESSAGE=0,"' + topic + '"' + r
+   			    do_debug(debug,"Send Command: " + cmd)
+			    channel0_at.write(cmd)
+			    reading_resp()
+        		    agn=pause("Press <X> to monitor/receive another. ")
+                            if agn:
+			        break
+        finally:
 		mqtt_disconn = 'AT+SQNSMQTTCLIENTDISCONNECT=0' + r
  		do_debug(debug,"Send Command: " + mqtt_disconn)
 		channel0_at.write(mqtt_disconn)
 		resp = get_line_include('OK')
-	finally:
 		return
 
 def mqtt_post(debug, server, port):
