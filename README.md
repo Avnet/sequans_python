@@ -1,6 +1,7 @@
 ﻿---
 
 # Sequans Monarch-GO Python Demonstration Code
+**updated for Python 3**
 ## Overview
 
 Monarch is a single-chip LTE solution designed specifically for narrowband IoT applications, details of the solution are located at https://www.sequans.com/products-solutions/monarch-lte-platform/. The Monarch-GO comes (<<add product purchase link>>) with an interface board that provides a USB/UART VCP interface so it can easily be connected to a PC with an avaialble USB port.  To demonstrate some of the solutions functionality, this python script demonstrates implementation of the HTTP and MQTT connection methods. When run, the script presents the user a menu of actions:

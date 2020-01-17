@@ -4,11 +4,11 @@ import time
 import sys
 
 #====================================================================================================================
-#	Configurable parameters
+#    Configurable parameters
 #====================================================================================================================
-uart0_at = "/dev/ttyUSB0"				# section for AT0 channel configuration
+uart0_at = "COM15"                       # section for AT0 channel configuration
 uart0_at_speed = 115200
-channel0_at = serial.Serial(uart0_at, uart0_at_speed, timeout=0.5, parity=serial.PARITY_NONE, rtscts=True)  # open serial port
+channel0_at = serial.Serial(uart0_at, uart0_at_speed, timeout=0.5, parity=serial.PARITY_NONE, rtscts=True)  
 
 topic = "sqn/test"
 clientID = "client-test1"
@@ -50,308 +50,323 @@ KOqkqm57TH2H3eDJAkSnh6/DNFu0Qg==
 #====================================================================================================================
 
 parser = argparse.ArgumentParser(
-	description='Script demonstrating HTTP/HTTPS/MQTT usage', 
-	epilog='!! Verify UART (uart0_at) and speed (uart0_at_speed) settings in script !!\n\n'
-	)
+    description='Script demonstrating HTTP/HTTPS/MQTT usage', 
+    epilog='!! Verify UART (uart0_at) and speed (uart0_at_speed) settings in script !!\n\n'
+    )
 parser.add_argument('-d', '--debug', action='store_true',
-	help='enable output of debug messages',
-	default=False
-        )
+    help='enable output of debug messages',
+    default=False
+    )
 parser.add_argument('-s', '--server',
-        help='server ip addr or domain name',
-        default='broker.hivemq.com'
-        )
+    help='server ip addr or domain name',
+    default='broker.hivemq.com'
+    )
 parser.add_argument('-p', '--port',
-        help='server port',
-        default='1883'
-        )
+    help='server port',
+    default='1883'
+    )
 
 #====================================================================================================================
 
 def do_debug(doit, msg):
-	if doit:
-		print(msg)
+    if doit:
+        print(msg)
 
 def pause(msg):
-	agn=raw_input(msg) 
-	if agn == 'x' or agn == 'X':
-		return False
-	else:
-		return True
+    agn=input(msg).replace('\r', '').replace('\n', '')
+    if agn == 'x' or agn == 'X':
+        return False
+    else:
+        return True
 
 def reading_raw_resp():
-	maxtimeout = 20
-	for timeout in range(0, maxtimeout):
-		tmp_line = channel0_at.readlines()
-		for line in tmp_line:
-                	if line.rstrip() == 'OK':
-				return
-			else:
-				if line[0:3] == '<<<':
-					line = line.replace('<<<','')
-				print(line.rstrip())
-	return 
+    maxtimeout = 20
+    for timeout in range(0, maxtimeout):
+        tmp_line = channel0_at.readlines()
+        for line in tmp_line:
+            line = line.decode()
+            if line.rstrip() == 'OK':
+                return
+            else:
+                if line[0:3] == '<<<':
+                    line = line.replace('<<<','')
+                print(line.rstrip())
+    return 
 
 def reading_resp():
-	time.sleep(2)
-	tmp_line = channel0_at.readlines()
-	for line in tmp_line:
-		print(line)
-	#return tmp_line
-	return 
+    time.sleep(2)
+    tmp_line = channel0_at.readlines()
+    for line in tmp_line:
+        line = line.decode()
+        print(line)
+    #return tmp_line
+    return 
 
 def waiting_response(resp):
-	found = 0
-	maxtimeout = 20
-	for timeout in range(0, maxtimeout):
-		tmp_line = channel0_at.readlines()
-		for line in tmp_line:
-			line = line.replace('\r', '').replace('\n', '')
-			if line == resp:
-				found = 1
-				return True
-		time.sleep(1)
-	if found == 0:
-		print('... not found. Exit.')
-		sys.exit()
-		
+    found = 0
+    maxtimeout = 20
+    for timeout in range(0, maxtimeout):
+        tmp_line = channel0_at.readlines()
+        for line in tmp_line:
+            line = line.decode()
+            line = line.replace('\r', '').replace('\n', '')
+            if line == resp:
+                found = 1
+                return True
+        time.sleep(1)
+    if found == 0:
+        print('...not found. Exit.')
+        sys.exit()
+        
 def waiting_response_noexit(resp):
-	found = 0
-	maxtimeout = 5
-	for timeout in range(0, maxtimeout):
-		tmp_line = channel0_at.readlines()
-		for line in tmp_line:
-			line = line.replace('\r', '').replace('\n', '')
-			if line == resp:
-				found = 1
-				return True
-		time.sleep(1)
-	return False
+    found = 0
+    maxtimeout = 5
+    for timeout in range(0, maxtimeout):
+        tmp_line = channel0_at.readlines()
+        for line in tmp_line:
+            line = line.decode()
+            line = line.replace('\r', '').replace('\n', '')
+            if line == resp:
+                found = 1
+                return True
+        time.sleep(1)
+    return False
 
 def get_line_include(word):
-	maxtimeout = 20
-	for timeout in range(0, maxtimeout):
-		tmp_line = channel0_at.readlines()
-		for line in tmp_line:
-			if line.find(word) != -1:
-				return line
-		time.sleep(1)
-	return ''
+    maxtimeout = 20
+    for timeout in range(0, maxtimeout):
+        tmp_line = channel0_at.readlines()
+        for line in tmp_line:
+            line = line.decode()
+            line = line.replace('\r', '').replace('\n', '')
+            if line.find(word) != -1:
+                return line
+        time.sleep(1)
+    return ''
 
 def checking_at():
-	channel0_at.readlines()
-	channel0_at.write('AT'+r)
-	waiting_response('OK')
+    channel0_at.readlines()
+    channel0_at.write('AT\r'.encode())
+    waiting_response('OK')
 
 def load_cert():
-	cert_size = len(ssl_ca_pem_certificat)
-	print("...loading certificate ({} bytes)".format(cert_size))
-        cmd = "at+sqnsnvw=\"certificate\",0," + str(cert_size) + r
-	channel0_at.write(cmd)
-	waiting_response('> ')
-	channel0_at.write(ssl_ca_pem_certificat)
-	waiting_response('OK')
-        cmd = "at+sqnspcfg=1,2,\"\",7,1" + r
-	channel0_at.write(cmd)
-	waiting_response('OK')
-        print('...Certificate Loaded')
+    cert_size = len(ssl_ca_pem_certificat)
+    print("...loading certificate ({} bytes)".format(cert_size))
+    cmd = "at+sqnsnvw=\"certificate\",0," + str(cert_size) + r
+    channel0_at.write(cmd.encode())
+    waiting_response('> ')
+    channel0_at.write(ssl_ca_pem_certificat.encode())
+    waiting_response('OK')
+    cmd = "at+sqnspcfg=1,2,\"\",7,1" + r
+    channel0_at.write(cmd.encode())
+    waiting_response('OK')
+    print('...Certificate Loaded')
 
 def remove_cert():
-	cmd = "AT+SQNSNVW=\"certificate\",0,0" + r
-	channel0_at.write(cmd)
-	waiting_response('OK')
-	print('\n...certificate removed')
+    cmd = "AT+SQNSNVW=\"certificate\",0,0" + r
+    channel0_at.write(cmd.encode())
+    waiting_response('OK')
+    print('\n...certificate removed')
 
 def stream_test():
-        print('=================================')
-        print('Perform a STREAM test, streaming {} chunks from httpbin.org'.format(stream_count))
-	if use_tls:
-          print(r'using TLS.')
-          load_cert()
-        cmd = "at+sqnhttpcfg=1,\"httpbin.org\"" + r
-	channel0_at.write(cmd)
-	waiting_response('OK')
-        cmd = "AT+SQNHTTPQRY=1,0,\"/stream/" +str(stream_count)+"\"" + r
-	channel0_at.write(cmd)
-	waiting_response('OK')
-        resp = get_line_include('+SQNHTTPRING:')
-	print('->received a response: '+resp)
-	cmd = "AT+SQNHTTPRCV=1" + r
-	print('cmd sent: '+cmd)
-	channel0_at.write(cmd)
-        print('Response:')
-        reading_raw_resp()
-	if use_tls:
-          remove_cert()
-        print('=================================')
-        pause("Press <ENTER> to continue. ")
+    print('=================================')
+    print('Perform a STREAM test, streaming {} chunks from httpbin.org'.format(stream_count))
+    if use_tls:
+        print(r'using TLS.')
+        load_cert()
+    cmd = "at+sqnhttpcfg=1,\"httpbin.org\"" + r
+    channel0_at.write(cmd.encode())
+    waiting_response('OK')
+    cmd = "AT+SQNHTTPQRY=1,0,\"/stream/" +str(stream_count)+"\"" + r
+    channel0_at.write(cmd.encode())
+    waiting_response('OK')
+    resp = get_line_include('+SQNHTTPRING:')
+    print('->received a response: '+resp)
+    cmd = "AT+SQNHTTPRCV=1" + r
+    print('cmd sent: '+cmd)
+    channel0_at.write(cmd.encode())
+    print('Response:')
+    reading_raw_resp()
+    if use_tls:
+        remove_cert()
+    print('=================================')
+    pause("Press <ENTER> to continue. ")
 
         
 def put_test():
-        print('=================================')
-        print('Perform PUT test with httpbin.org')
-	if use_tls:
-          print(r'using TLS.')
-          load_cert()
-        cmd = "at+sqnhttpcfg=1,\"httpbin.org\"" + r
-	channel0_at.write(cmd)
-	waiting_response('OK')
-	cmd = "AT+SQNHTTPSND=1,1,\"/put\",8" + r
-	channel0_at.write(cmd)
-	waiting_response('> ')
-        channel0_at.write("PUT TEST")
-	waiting_response('OK')
-        get_line_include('+SQNHTTPRING: ')
-        cmd = "AT+SQNHTTPRCV=1" + r
-	channel0_at.write(cmd)
-        print('httpbin.org Response is:')
-        reading_raw_resp()
-	if use_tls:
-          remove_cert()
-        print('=================================')
-        pause("Press <ENTER> to continue. ")
+    print('=================================')
+    print('Perform PUT test with httpbin.org')
+    if use_tls:
+        print(r'using TLS.')
+        load_cert()
+    cmd = "at+sqnhttpcfg=1,\"httpbin.org\"" + r
+    channel0_at.write(cmd.encode())
+    waiting_response('OK')
+    cmd = "AT+SQNHTTPSND=1,1,\"/put\",8" + r
+    channel0_at.write(cmd.encode())
+    waiting_response('> ')
+    channel0_at.write("PUT TEST".encode())
+    waiting_response('OK')
+    get_line_include('+SQNHTTPRING: ')
+    cmd = "AT+SQNHTTPRCV=1" + r
+    channel0_at.write(cmd.encode())
+    print('httpbin.org Response is:')
+    reading_raw_resp()
+    if use_tls:
+        remove_cert()
+    print('=================================')
+    pause("Press <ENTER> to continue. ")
 
 def post_test():
-        print('=================================')
-        print('Perform POST test with httpbin.org')
-	if use_tls:
-          print(r'using TLS.')
-          load_cert()
-        cmd = "at+sqnhttpcfg=1,\"httpbin.org\"" + r
-	channel0_at.write(cmd)
-	waiting_response('OK')
-        cmd = "AT+SQNHTTPSND=1,0,\"/post\",9" + r
-	channel0_at.write(cmd)
-	waiting_response('> ')
-        channel0_at.write("POST TEST")
-	waiting_response('OK')
-        get_line_include('+SQNHTTPRING: ')
-        cmd = "AT+SQNHTTPRCV=1" + r
-	channel0_at.write(cmd)
-        print('httpbin.org Response is:')
-        reading_raw_resp()
-	if use_tls:
-          remove_cert()
-        print('=================================')
-        pause("Press <ENTER> to continue. ")
+    print('=================================')
+    print('Perform POST test with httpbin.org')
+    if use_tls:
+        print(r'using TLS.')
+        load_cert()
+    cmd = "at+sqnhttpcfg=1,\"httpbin.org\"" + r
+    channel0_at.write(cmd.encode())
+    waiting_response('OK')
+    cmd = "AT+SQNHTTPSND=1,0,\"/post\",9" + r
+    channel0_at.write(cmd.encode())
+    waiting_response('> ')
+    channel0_at.write("POST TEST".encode())
+    waiting_response('OK')
+    get_line_include('+SQNHTTPRING: ')
+    cmd = "AT+SQNHTTPRCV=1" + r
+    channel0_at.write(cmd.encode())
+    print('httpbin.org Response is:')
+    reading_raw_resp()
+    if use_tls:
+        remove_cert()
+    print('=================================')
+    pause("Press <ENTER> to continue. ")
 
 def delete_test():
-        print('=================================')
-        print('Perform DELETE test with httpbin.org')
-	if use_tls:
-          print(r'using TLS.')
-          load_cert()
-        cmd = "at+sqnhttpcfg=1,\"httpbin.org\"" + r
-	channel0_at.write(cmd)
-	waiting_response('OK')
-	cmd = "AT+SQNHTTPQRY=1,2,\"/delete\",\"accept: application/json\"" + r
-	channel0_at.write(cmd)
-	waiting_response('OK')
-        get_line_include('+SQNHTTPRING: ')
-        cmd = "AT+SQNHTTPRCV=1" + r
-	channel0_at.write(cmd)
-        print('httpbin.org Response is:')
-        reading_raw_resp()
-	if use_tls:
-          remove_cert()
-        print('=================================')
-        pause("Press <ENTER> to continue. ")
+    print('=================================')
+    print('Perform DELETE test with httpbin.org')
+    if use_tls:
+        print(r'using TLS.')
+        load_cert()
+    cmd = "at+sqnhttpcfg=1,\"httpbin.org\"" + r
+    channel0_at.write(cmd.encode())
+    waiting_response('OK')
+    cmd = "AT+SQNHTTPQRY=1,2,\"/delete\",\"accept: application/json\"" + r
+    channel0_at.write(cmd.encode())
+    waiting_response('OK')
+    get_line_include('+SQNHTTPRING: ')
+    cmd = "AT+SQNHTTPRCV=1" + r
+    channel0_at.write(cmd.encode())
+    print('httpbin.org Response is:')
+    reading_raw_resp()
+    if use_tls:
+        remove_cert()
+    print('=================================')
+    pause("Press <ENTER> to continue. ")
 
 
 def get_test():
-        print('=================================')
-        print('Perform GET test using httpbin.org')
-	if use_tls:
-          print(r'using TLS.')
-          load_cert()
-        cmd = "at+sqnhttpcfg=1,\"httpbin.org\"" + r
-	channel0_at.write(cmd)
-	waiting_response('OK')
-        cmd = "AT+SQNHTTPQRY=1,0,\"/get\"" + r
-	channel0_at.write(cmd)
-	waiting_response('OK')
-        get_line_include('+SQNHTTPRING: ')
-        cmd = "AT+SQNHTTPRCV=1" + r
-	channel0_at.write(cmd)
-        print('Response is:')
-        reading_raw_resp()
-	if use_tls:
-          remove_cert()
-        print('=================================')
-        pause("Press <ENTER> to continue. ")
+    print('=================================')
+    print('Perform GET test using httpbin.org')
+    if use_tls:
+        print(r'using TLS.')
+        load_cert()
+    cmd = "at+sqnhttpcfg=1,\"httpbin.org\"" + r
+    channel0_at.write(cmd.encode())
+    waiting_response('OK')
+    cmd = "AT+SQNHTTPQRY=1,0,\"/get\"" + r
+    channel0_at.write(cmd.encode())
+    waiting_response('OK')
+    get_line_include('+SQNHTTPRING: ')
+    cmd = "AT+SQNHTTPRCV=1" + r
+    channel0_at.write(cmd.encode())
+    print('Response is:')
+    reading_raw_resp()
+    if use_tls:
+        remove_cert()
+    print('=================================')
+    pause("Press <ENTER> to continue. ")
 
 def mqtt_recv(debug, server, port):
-        mqtt_cfg = "AT+SQNSMQTTCLIENTCFG=0,\"" + clientID + "\""+ r
-   	do_debug(debug, "Send Command: " + mqtt_cfg)
-        channel0_at.write(mqtt_cfg)
-        waiting_response_noexit('OK')
-	try:
-                mqtt_conn = 'AT+SQNSMQTTCLIENTCONNECT=0,"' + server + '",' + port + r
-   		do_debug(debug,"Send Command: " + mqtt_conn)
-                channel0_at.write(mqtt_conn)
-                resp=get_line_include('+SQNSMQTTCLIENTONCONNECT:')
-		if resp == '':
-			print('TIME OUT:Unable to connect! ')
-			return
-   		do_debug(debug,"Connect Response: " + resp)
+    mqtt_cfg = "AT+SQNSMQTTCLIENTCFG=0,\"" + clientID + "\""+ r
+    do_debug(debug, "Send Command: " + mqtt_cfg)
+    channel0_at.write(mqtt_cfg.encode())
+    waiting_response_noexit('OK')
+    try:
+        mqtt_conn = 'AT+SQNSMQTTCLIENTCONNECT=0,"' + server + '",' + port + r
+        do_debug(debug,"Send Command: " + mqtt_conn)
+        channel0_at.write(mqtt_conn.encode())
+        resp=get_line_include('+SQNSMQTTCLIENTONCONNECT:')
+        if resp == '':
+            print('TIME OUT:Unable to connect! ')
+            return
+        do_debug(debug,"Connect Response: " + resp)
 
-                mqtt_sub = "AT+SQNSMQTTCLIENTSUBSCRIBE=0,\"" + topic + "\",1" + r
-   		do_debug(debug,"Send Command: " + mqtt_sub)
-                channel0_at.write(mqtt_sub)
-                get_line_include('+SQNSMQTTCLIENTONSUBSCRIBE:')
-                print 'Subscription now active...'
-          	while True:
-	                resp = get_line_include('+SQNSMQTTCLIENTONMESSAGE:')
-			print('Received a message: ' + resp)
-			if resp != '':
-			    cmd = 'AT+SQNSMQTTCLIENTRCVMESSAGE=0,"' + topic + '"' + r
-   			    do_debug(debug,"Send Command: " + cmd)
-			    channel0_at.write(cmd)
-			    reading_resp()
-        		    agn=pause("Press <X> to monitor/receive another. ")
-                            if agn:
-			        break
-        finally:
-		mqtt_disconn = 'AT+SQNSMQTTCLIENTDISCONNECT=0' + r
- 		do_debug(debug,"Send Command: " + mqtt_disconn)
-		channel0_at.write(mqtt_disconn)
-		resp = get_line_include('OK')
-		return
+        mqtt_sub = "AT+SQNSMQTTCLIENTSUBSCRIBE=0,\"" + topic + "\",1" + r
+        do_debug(debug,"Send Command: " + mqtt_sub)
+        channel0_at.write(mqtt_sub.encode())
+        get_line_include('+SQNSMQTTCLIENTONSUBSCRIBE:')
+        print('Subscription now active...')
+        maxtimeout = 60
+        end_time = time.time()+maxtimeout
+        while True:
+            resp = get_line_include('+SQNSMQTTCLIENTONMESSAGE:')
+            if resp != '':
+                print('Received a message: [' + resp +']')
+                cmd = 'AT+SQNSMQTTCLIENTRCVMESSAGE=0,"' + topic + '"' + r
+                do_debug(debug,"Send Command: " + cmd)
+                channel0_at.write(cmd.encode())
+                reading_resp()
+                agn=pause("Press <X> to monitor/receive another. ")
+                if agn:
+                    break
+            if time.time() > end_time:
+                print("Timeed out waiting for message!")
+                break
+            else:
+                end_time = time.time()+maxtimeout
+    finally:
+        mqtt_disconn = 'AT+SQNSMQTTCLIENTDISCONNECT=0' + r
+        do_debug(debug,"Send Command: " + mqtt_disconn)
+        channel0_at.write(mqtt_disconn.encode())
+        resp = get_line_include('OK')
+        return
 
 def mqtt_post(debug, server, port):
-	try:
-                mqtt_cfg = "AT+SQNSMQTTCLIENTCFG=0,\"" + clientID + "\""+ r
- 		do_debug(debug,"Send Command: " + mqtt_cfg)
-                channel0_at.write(mqtt_cfg)
-                waiting_response('OK')
+    try:
+        mqtt_cfg = "AT+SQNSMQTTCLIENTCFG=0,\"" + clientID + "\""+ r
+        do_debug(debug,"Send Command: " + mqtt_cfg)
+        channel0_at.write(mqtt_cfg.encode())
+        waiting_response('OK')
 
-                mqtt_conn = 'AT+SQNSMQTTCLIENTCONNECT=0,"' + server + '",' + port + r
- 		do_debug(debug,"Send Command: " + mqtt_conn)
-                channel0_at.write(mqtt_conn)
-                get_line_include('+SQNSMQTTCLIENTONCONNECT:')
+        mqtt_conn = 'AT+SQNSMQTTCLIENTCONNECT=0,"' + server + '",' + port + r
+        do_debug(debug,"Send Command: " + mqtt_conn)
+        channel0_at.write(mqtt_conn.encode())
+        get_line_include('+SQNSMQTTCLIENTONCONNECT:')
 
-                mqtt_sub = "AT+SQNSMQTTCLIENTSUBSCRIBE=0,\"" + topic + "\",1" + r
- 		do_debug(debug,"Send Command: " + mqtt_sub)
-                channel0_at.write(mqtt_sub)
-                resp=get_line_include('+SQNSMQTTCLIENTONSUBSCRIBE:')
-                print 'Subscription now active. ['+resp+']'
-          	while True:
-			msg = raw_input("Enter message to post or 'x' to exit: ")
-                        if msg == 'x':
- 				break
-			cmd = 'AT+SQNSMQTTCLIENTPUBLISH=0,"' + topic + '",1' + r
-			do_debug(debug,'Sending CMD: ' + cmd)
-			channel0_at.write(cmd)
-	                waiting_response('> ')
-			channel0_at.write(msg + '')
-	                get_line_include('+SQNSMQTTCLIENTPUBLISH:')
-		
-		mqtt_disconn = 'AT+SQNSMQTTCLIENTDISCONNECT=0' + r
- 		do_debug(debug,"Send Command: " + mqtt_disconn)
-		channel0_at.write(mqtt_disconn)
-		resp = get_line_include('OK')
-	finally:
-		return
+        mqtt_sub = "AT+SQNSMQTTCLIENTSUBSCRIBE=0,\"" + topic + "\",1" + r
+        do_debug(debug,"Send Command: " + mqtt_sub)
+        channel0_at.write(mqtt_sub.encode())
+        resp=get_line_include('+SQNSMQTTCLIENTONSUBSCRIBE:')
+        print('Subscription now active. ['+resp+']')
+        while True:
+            msg = input("Enter message to post or 'x' to exit: ")
+            if msg == 'x':
+                break
+            cmd = 'AT+SQNSMQTTCLIENTPUBLISH=0,"' + topic + '",1' + r
+            do_debug(debug,'Sending CMD: ' + cmd)
+            channel0_at.write(cmd.encode())
+            waiting_response('> ')
+            msg = msg + "\r"
+            do_debug(debug,'Sending Msg: ' + msg)
+            channel0_at.write(msg.encode())
+            get_line_include('+SQNSMQTTCLIENTPUBLISH:')
+        
+        mqtt_disconn = 'AT+SQNSMQTTCLIENTDISCONNECT=0' + r
+        do_debug(debug,"Send Command: " + mqtt_disconn)
+        channel0_at.write(mqtt_disconn.encode())
+        resp = get_line_include('OK')
+    finally:
+        return
 
 #====================================================================================================================
 
@@ -363,7 +378,7 @@ if __name__ == '__main__':
         print("               ");
         print("     ****      ");
         print("    **  **     Python HTTP/MQTT/HTTPS example using the Sequans Monarch Go Starter Kit")
-	if use_tls:
+        if use_tls:
             print("   **    **    Using TLS.");
         else:
             print("   **    **    Not using TLS.");
@@ -380,42 +395,43 @@ if __name__ == '__main__':
         9.Toggle TLS 
         0.Exit
         """)
-        ans=raw_input("Run which test? ") 
+        ans=input("Run which test? ") 
         if ans=="1": 
-          print("\n Starter Kit Firmware:") 
-          channel0_at.write('AT!="showversion"'+r)
-          reading_raw_resp()
-          print('=================================')
-          pause("Press <ENTER> to continue. ")
+            print("\n Starter Kit Firmware:") 
+            cmd = 'AT!="showversion"'+r
+            channel0_at.write(cmd.encode())
+            reading_raw_resp()
+            print('=================================')
+            pause("Press <ENTER> to continue. ")
         elif ans=="2":
-          print("\n HTTP PUT Test") 
-  	  stream_test()
+            print("\n HTTP PUT Test") 
+            stream_test()
         elif ans=="3":
-          print("\n HTTP PUT Test") 
-          put_test()
+            print("\n HTTP PUT Test") 
+            put_test()
         elif ans=="4":
-          print("\n HTTP POST Test") 
-          post_test()
+            print("\n HTTP POST Test") 
+            post_test()
         elif ans=="5":
-          print("\n HTTP DELETE Test") 
-          delete_test()
+            print("\n HTTP DELETE Test") 
+            delete_test()
         elif ans=="6":
-          print("\n HTTP GET Test") 
-          get_test()
+            print("\n HTTP GET Test") 
+            get_test()
         elif ans=="7":
-          print("\nSetup for MQTT Subscribe") 
-          mqtt_recv(args.debug, args.server, args.port)	
+            print("\nSetup for MQTT Subscribe") 
+            mqtt_recv(args.debug, args.server, args.port)    
         elif ans=="8":
-          print("\nSetup for MQTT Post") 
-          mqtt_post(args.debug, args.server, args.port)	
+            print("\nSetup for MQTT Post") 
+            mqtt_post(args.debug, args.server, args.port)    
         elif ans=="9":
-          print("\nToggle TLS setting") 
-	  use_tls = not use_tls
+            print("\nToggle TLS setting") 
+            use_tls = not use_tls
         elif ans=="0":
-          print("\n Exit.") 
-          sys.exit()
+            print("\n Exit.") 
+            sys.exit()
         else:
-          print("\n Invalid entry!") 
+            print("\n Invalid entry!") 
 
     print('Exit programm.')
     channel0_at.close()
