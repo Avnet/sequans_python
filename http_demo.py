@@ -6,7 +6,7 @@ import sys
 #====================================================================================================================
 #    Configurable parameters
 #====================================================================================================================
-uart0_at = "COM15"                       # section for AT0 channel configuration
+uart0_at = "/dev/ttymxc0"                       # section for AT0 channel configuration
 uart0_at_speed = 115200
 channel0_at = serial.Serial(uart0_at, uart0_at_speed, timeout=0.5, parity=serial.PARITY_NONE, rtscts=True)  
 
@@ -287,32 +287,32 @@ def get_test():
     pause("Press <ENTER> to continue. ")
 
 def mqtt_recv(debug, server, port):
-    mqtt_cfg = "AT+SQNSMQTTCLIENTCFG=0,\"" + clientID + "\""+ r
+    mqtt_cfg = "AT+SQNSMQTTCFG=0,\"" + clientID + "\""+ r
     do_debug(debug, "Send Command: " + mqtt_cfg)
     channel0_at.write(mqtt_cfg.encode())
     waiting_response_noexit('OK')
     try:
-        mqtt_conn = 'AT+SQNSMQTTCLIENTCONNECT=0,"' + server + '",' + port + r
+        mqtt_conn = 'AT+SQNSMQTTCONNECT=0,"' + server + '",' + port + r
         do_debug(debug,"Send Command: " + mqtt_conn)
         channel0_at.write(mqtt_conn.encode())
-        resp=get_line_include('+SQNSMQTTCLIENTONCONNECT:')
+        resp=get_line_include('+SQNSMQTTONCONNECT:')
         if resp == '':
             print('TIME OUT:Unable to connect! ')
             return
         do_debug(debug,"Connect Response: " + resp)
 
-        mqtt_sub = "AT+SQNSMQTTCLIENTSUBSCRIBE=0,\"" + topic + "\",1" + r
+        mqtt_sub = "AT+SQNSMQTTSUBSCRIBE=0,\"" + topic + "\",1" + r
         do_debug(debug,"Send Command: " + mqtt_sub)
         channel0_at.write(mqtt_sub.encode())
-        get_line_include('+SQNSMQTTCLIENTONSUBSCRIBE:')
+        get_line_include('+SQNSMQTTONSUBSCRIBE:')
         print('Subscription now active...')
         maxtimeout = 60
         end_time = time.time()+maxtimeout
         while True:
-            resp = get_line_include('+SQNSMQTTCLIENTONMESSAGE:')
+            resp = get_line_include('+SQNSMQTTONMESSAGE:')
             if resp != '':
                 print('Received a message: [' + resp +']')
-                cmd = 'AT+SQNSMQTTCLIENTRCVMESSAGE=0,"' + topic + '"' + r
+                cmd = 'AT+SQNSMQTTRCVMESSAGE=0,"' + topic + '"' + r
                 do_debug(debug,"Send Command: " + cmd)
                 channel0_at.write(cmd.encode())
                 reading_resp()
@@ -325,7 +325,7 @@ def mqtt_recv(debug, server, port):
             else:
                 end_time = time.time()+maxtimeout
     finally:
-        mqtt_disconn = 'AT+SQNSMQTTCLIENTDISCONNECT=0' + r
+        mqtt_disconn = 'AT+SQNSMQTTDISCONNECT=0' + r
         do_debug(debug,"Send Command: " + mqtt_disconn)
         channel0_at.write(mqtt_disconn.encode())
         resp = get_line_include('OK')
@@ -333,35 +333,35 @@ def mqtt_recv(debug, server, port):
 
 def mqtt_post(debug, server, port):
     try:
-        mqtt_cfg = "AT+SQNSMQTTCLIENTCFG=0,\"" + clientID + "\""+ r
+        mqtt_cfg = "AT+SQNSMQTTCFG=0,\"" + clientID + "\""+ r
         do_debug(debug,"Send Command: " + mqtt_cfg)
         channel0_at.write(mqtt_cfg.encode())
-        waiting_response('OK')
+        waiting_response_noexit('OK')
 
-        mqtt_conn = 'AT+SQNSMQTTCLIENTCONNECT=0,"' + server + '",' + port + r
+        mqtt_conn = 'AT+SQNSMQTTCONNECT=0,"' + server + '",' + port + r
         do_debug(debug,"Send Command: " + mqtt_conn)
         channel0_at.write(mqtt_conn.encode())
-        get_line_include('+SQNSMQTTCLIENTONCONNECT:')
+        get_line_include('+SQNSMQTTONCONNECT:')
 
-        mqtt_sub = "AT+SQNSMQTTCLIENTSUBSCRIBE=0,\"" + topic + "\",1" + r
+        mqtt_sub = "AT+SQNSMQTTSUBSCRIBE=0,\"" + topic + "\",1" + r
         do_debug(debug,"Send Command: " + mqtt_sub)
         channel0_at.write(mqtt_sub.encode())
-        resp=get_line_include('+SQNSMQTTCLIENTONSUBSCRIBE:')
+        resp=get_line_include('+SQNSMQTTONSUBSCRIBE:')
         print('Subscription now active. ['+resp+']')
         while True:
             msg = input("Enter message to post or 'x' to exit: ")
             if msg == 'x':
                 break
-            cmd = 'AT+SQNSMQTTCLIENTPUBLISH=0,"' + topic + '",1' + r
+            cmd = 'AT+SQNSMQTTPUBLISH=0,"' + topic + '",,'+str(len(msg)) + r
             do_debug(debug,'Sending CMD: ' + cmd)
             channel0_at.write(cmd.encode())
             waiting_response('> ')
             msg = msg + "\r"
-            do_debug(debug,'Sending Msg: ' + msg)
+            do_debug(debug,'Sending Msg ('+str(len(msg))+'): ' + msg)
             channel0_at.write(msg.encode())
-            get_line_include('+SQNSMQTTCLIENTPUBLISH:')
+            get_line_include('+SQNSMQTTPUBLISH:')
         
-        mqtt_disconn = 'AT+SQNSMQTTCLIENTDISCONNECT=0' + r
+        mqtt_disconn = 'AT+SQNSMQTTDISCONNECT=0' + r
         do_debug(debug,"Send Command: " + mqtt_disconn)
         channel0_at.write(mqtt_disconn.encode())
         resp = get_line_include('OK')
